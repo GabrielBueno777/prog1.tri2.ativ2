@@ -1,22 +1,57 @@
-//falar sobre api rest
+import TodoListClass, { Item } from "./core"
+const todolist = new TodoListClass("todolist.json")
+
+async function testRoute(req: Bun.BunRequest) {
+  return Response.json({
+    method: req.method,
+    time: new Date().toLocaleString('pt-BR'),
+    body: await req.body?.text(),
+  });
+}
 
 const server = Bun.serve({
-    port: 3000,
-    routes: {
-        "/api-debugger": Bun.file('public/api-debugger.html'),
-        "/test": {
-            GET: () => Response.json({type: "GET", time: Date.now()}),
-            PUT: () => Response.json({type: "PUT", time: Date.now()}),
-            POST: () => Response.json({type: "POST", time: Date.now()}),
-            DELETE: () => Response.json({type: "DELETE", time: Date.now()})
+  port: 3000,
+  routes: {
+    '/api-debugger': (req) => new Response(Bun.file('./public/api-debugger.html')),
+    '/test': {
+      GET: testRoute,
+      POST: testRoute,
+      PUT: testRoute,
+      DELETE: testRoute,
+      PATCH: testRoute,
+      OPTIONS: testRoute,
+    },
+    '/todo': {
+      GET: async () => {
+        const items = await todolist.getItems()
+        return Response.json(items)
+      },
+
+      POST: async (req) => {
+        let data
+  
+        try {
+          data = await req.body?.json()
+        } catch(e) {
+          return new Response('json inválido', { status: 400 })
         }
 
-    },
-    fetch() {
-        return new Response("Not Found", { status: 404})
-    }
-        
-    
-})
+        if (!data.title) 
+          return new Response('É preciso informar title', { status: 400 })
 
-console.log(`http://localhost:${server.port}`)
+        try {
+          await todolist.addItem(new Item(data.title))
+        } catch (error) {
+          return new Response('Erro ao adicionar item', { status: 500 })
+        }
+
+        return new Response('Created', { status: 201 })
+      }
+    }
+  },
+  fetch(req) {
+    return new Response("Not Found", { status: 404 });
+  },
+});
+
+console.log(`Server running at http://localhost:${server.port}`);
