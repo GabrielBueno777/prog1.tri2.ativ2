@@ -1,60 +1,188 @@
 <!DOCTYPE html>
-<html lang='pt-BR'>
+<html lang="pt-BR">
 
 <head>
-  <meta charset='utf-8'>
-  <title>To-Do</title>
-  <script type="module">
-    // const elCreateForm = document.querySelector("#elCreateForm")
 
-    function createItemElement(index, title) {
-      const clone = elItemTemplate.content.cloneNode(true)
-      const elTitle = clone.querySelector('span')
-      const elBtDelete = clone.querySelector('button')
-      elTitle.innerText = title
-      elBtDelete.dataset.index = index // abre uma brecha gigantesca pra HACKING
-      elItemTemplate.parentElement.append(clone)
-    }
+<meta charset="UTF-8">
 
-    void async function () {
-      const request = await fetch("/todo")
-      const items = await request.json()
-      items.forEach((item, index) => createItemElement(index, item.title))
-    }();
+<title>Lista de Tarefas</title>
 
-    elCreateForm.addEventListener('submit', async (ev) => {
-      ev.preventDefault()
-      const title = elCreateForm.elTite.value
-      if (title.trim() === "") return
-      elCreateForm.fields.setAttribute('disabled', true)
-      const request = await fetch("/todo", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ title })
-      })
-      elCreateForm.fields.removeAttribute('disabled')
-      createItemElement(-1, title)
-      elCreateForm.elTite.value = ''
-    })
+<style>
 
-  </script>
+body{
+
+    font-family:Arial;
+    width:600px;
+    margin:auto;
+
+}
+
+input{
+
+    width:80%;
+    padding:8px;
+
+}
+
+button{
+
+    padding:8px;
+
+}
+
+li{
+
+    margin:10px 0;
+
+}
+
+</style>
+
 </head>
 
 <body>
-  <form id="elCreateForm">
-    <fieldset name="fields">
-      <input name="elTite">
-      <button name="elCreate">adicionar</button>
-    </fieldset>
-  </form>
-  <ul>
-    <template id="elItemTemplate">
-      <li>
-        <button>del</button>
-        <span>...</span>
-      </li>
-    </template>
-  </ul>
+
+<h1>Lista de Tarefas</h1>
+
+<form id="form">
+
+<input
+id="title"
+placeholder="Digite uma tarefa">
+
+<button>
+
+Adicionar
+
+</button>
+
+</form>
+
+<hr>
+
+<ul id="lista">
+
+</ul>
+
+<script>
+
+const lista=document.querySelector("#lista");
+
+const form=document.querySelector("#form");
+
+const title=document.querySelector("#title");
+
+async function carregarLista(){
+
+    lista.innerHTML="";
+
+    const req=await fetch("/todo");
+
+    const items=await req.json();
+
+    items.forEach((item,index)=>{
+
+        const li=document.createElement("li");
+
+        li.innerHTML=`
+
+        ${item.title}
+
+        <button onclick="editar(${index})">
+
+        Editar
+
+        </button>
+
+        <button onclick="remover(${index})">
+
+        Excluir
+
+        </button>
+
+        `;
+
+        lista.appendChild(li);
+
+    });
+
+}
+
+form.addEventListener("submit",async(e)=>{
+
+    e.preventDefault();
+
+    if(title.value.trim()==="")
+        return;
+
+    await fetch("/todo",{
+
+        method:"POST",
+
+        headers:{
+            "Content-Type":"application/json"
+        },
+
+        body:JSON.stringify({
+
+            title:title.value
+
+        })
+
+    });
+
+    title.value="";
+
+    carregarLista();
+
+});
+
+async function remover(index){
+
+    await fetch("/todo/"+index,{
+
+        method:"DELETE"
+
+    });
+
+    carregarLista();
+
+}
+
+async function editar(index){
+
+    const novo=prompt("Novo título:");
+
+    if(novo===null)
+        return;
+
+    if(novo.trim()==="")
+        return;
+
+    await fetch("/todo/"+index,{
+
+        method:"PUT",
+
+        headers:{
+            "Content-Type":"application/json"
+        },
+
+        body:JSON.stringify({
+
+            title:novo
+
+        })
+
+    });
+
+    carregarLista();
+
+}
+
+carregarLista();
+
+</script>
+
 </body>
 
 </html>

@@ -1,74 +1,85 @@
-/**
- * @todo
- * known issues:
- * - getItems needs to await loadListFromDisk()
- */
-
-// class Item_ { 
-//   public title: string
-//   constructor(title: string) {
-//     this.title = title
-//   }
-// }
-
+// @ts-nocheck
 class Item {
-  constructor(public title: string) { }
+  constructor(public title: string) {}
 }
 
 class TodoList {
-  private items: Promise<Item[]>
-  private filePath: string
+  private items: Promise<Item[]>;
+  private filePath: string;
 
   constructor(filePath: string) {
-    this.filePath = filePath
-    this.items = this.loadListFromDisk()
+    this.filePath = filePath;
+    this.items = this.loadListFromDisk();
   }
 
+  // Salva a lista no arquivo
   private async saveListToDisk() {
-    const file = Bun.file(this.filePath)
-    const data = JSON.stringify(await this.items)
-    await file.write(data)
+    const file = Bun.file(this.filePath);
+    const data = JSON.stringify(await this.items, null, 2);
+    await file.write(data);
   }
 
+  // Carrega a lista do arquivo
   private async loadListFromDisk() {
-    const file = Bun.file(this.filePath)
-    // // const text = await file.text()
-    // // const data = JSON.parse(text)
-    const data = await file.json() as Item[]
-    const items = data.map((v: any) => new Item(v.title))
-    return items
+    const file = Bun.file(this.filePath);
+
+    if (!(await file.exists())) {
+      await Bun.write(this.filePath, "[]");
+      return [];
+    }
+
+    const data = await file.json() as Item[];
+    return data.map(item => new Item(item.title));
   }
 
-  /**
-   * Função que adiciona um novo item a lista
-   */
+  // Adiciona um item
   async addItem(item: Item) {
-    const items = await this.items
-    if (!item) 
-      throw "Item inválido"
-    if (!item.title.trim())
-      throw "Item deve conter um título"
-    items.push(item)
-    await this.saveListToDisk()
+    const items = await this.items;
+
+    if (!item)
+      throw "Item inválido";
+
+    if (!item.title || item.title.trim() === "")
+      throw "O item deve possuir um título.";
+
+    items.push(item);
+
+    await this.saveListToDisk();
   }
 
-  /**
-   * Remove item da lista por um indice
-   */
+  // Remove um item
   async removeItem(index: number) {
-    const items = await this.items
-    items.splice(index, 1)
-    await this.saveListToDisk()
+    const items = await this.items;
+
+    if (index < 0 || index >= items.length)
+      throw "Índice inválido.";
+
+    items.splice(index, 1);
+
+    await this.saveListToDisk();
   }
 
-  /**
-   * Retorna a cópia da lista de itens
-   */
+  // Atualiza um item
+  async updateItem(index: number, title: string) {
+    const items = await this.items;
+
+    if (index < 0 || index >= items.length)
+      throw "Índice inválido.";
+
+    if (!title || title.trim() === "")
+      throw "Título inválido.";
+
+    items[index].title = title;
+
+    await this.saveListToDisk();
+  }
+
+  // Retorna uma cópia da lista
   async getItems() {
-    const items = await this.items
-    return Array.from(items)
+    const items = await this.items;
+    return Array.from(items);
   }
 }
 
-export default TodoList
-export { TodoList, Item }
+export default TodoList;
+export { TodoList, Item };
